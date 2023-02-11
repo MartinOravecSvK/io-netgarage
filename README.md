@@ -19,4 +19,5 @@ Enter the 3 digit passcode to enter: Congrats you found it, now read the passwor
 level1@io:/levels$
 ```
 
-Note: I used th B option for grep to get the number I pring before running the program with it as the answer is not part of the result;
+Note: I used th B option for grep to get the number I pring before running the program with it as the answer is not part of the result. It is also possible to run the loop without the need to output the number (I just wanted to know it) since you get thrown into level2 shell to get access to .pass.
+
