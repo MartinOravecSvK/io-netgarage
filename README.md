@@ -1,22 +1,13 @@
 # io-netgarage
-IO net garage walk-through
-
-
-## Level 1:
-
-A program wants a 3 digit code. Because this is just 1000 possible combinations I run a loop and grep the one that is correct:
-
-```console
-level1@io:/levels$ for a in {0..9}; do for b in {0..9}; do for c in {0..9}; do echo "$a$b$c" ; echo "$a$b$c" | ./level01 ; done ; done ; done | grep "Congrats" -B 1
-```
-
-And got the result:
-
-```console
-level1@io:/levels$ for a in {0..9}; do for b in {0..9}; do for c in {0..9}; do echo "$a$b$c" ; echo "$a$b$c" | ./level01 ; done ; done ; done | grep "Congrats" -B 1
-Enter the 3 digit passcode to enter: 271
-Enter the 3 digit passcode to enter: Congrats you found it, now read the password for level2 from /home/level2/.pass
-level1@io:/levels$
-```
-
-Note: I used th B option for grep to get the number I pring before running the program with it as the answer is not part of the result;
+### IO net garage walk-through
+#### Levels:
+1. [Level 1](./level1.md)
+2. [Level 2](./level2.md)
+3. [Level 3]()
+4. [Level 4]()
+5. [Level 5]()
+6. [Level 6]()
+7. [Level 7]()
+8. [Level 8]()
+9. [Level 9]()
+10. [Level 10]()
