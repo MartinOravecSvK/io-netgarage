@@ -6,7 +6,7 @@
 3. [Level 3](./level3.md)
 4. [Level 4](./level4.md)
 5. [Level 5](./level5.md)
-6. [Level 6]()
+6. [Level 6](./level6.mc)
 7. [Level 7]()
 8. [Level 8]()
 9. [Level 9]()

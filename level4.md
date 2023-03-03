@@ -3,19 +3,19 @@
 The code for the program is simple:
 
 ```c
-  1 //writen by bla
-  2 #include <stdlib.h>
-  3 #include <stdio.h>
-  4 
-  5 int main() {
-  6         char username[1024];
-  7         FILE* f = popen("whoami","r");
-  8         fgets(username, sizeof(username), f);
-  9         printf("Welcome %s", username);
- 10 
- 11         return 0;
- 12 }
- 13
+ 1 //writen by bla
+ 2 #include <stdlib.h>
+ 3 #include <stdio.h>
+ 4 
+ 5 int main() {
+ 6         char username[1024];
+ 7         FILE* f = popen("whoami","r");
+ 8         fgets(username, sizeof(username), f);
+ 9         printf("Welcome %s", username);
+10 
+11         return 0;
+12 }
+13
 ```
 
 We can see it opening a process and calling a command **whoami**. This is normally safe but we can change what **whoami** stands for by changing the path it looks for the command. We can create a file in /tmp directory.
