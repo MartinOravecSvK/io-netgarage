@@ -1,15 +1,15 @@
 ## Level 5:
 
 ```c
-1 #include <stdio.h>
-2 #include <string.h>
-3 
-4 int main(int argc, char **argv) {
-5 
-6     char buf[128];
-7 
-8     if(argc < 2) return 1;
-9 
+ 1 #include <stdio.h>
+ 2 #include <string.h>
+ 3 
+ 4 int main(int argc, char **argv) {
+ 5 
+ 6     char buf[128];
+ 7 
+ 8     if(argc < 2) return 1;
+ 9 
 10     strcpy(buf, argv[1]);
 11 
 12     printf("%s\n", buf);
