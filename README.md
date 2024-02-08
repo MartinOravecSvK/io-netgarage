@@ -8,6 +8,8 @@
 5. [Level 5](./level5.md)
 6. [Level 6](./level6.md)
 7. [Level 7](./level7.md)
-8. [Level 8]()
-9. [Level 9]()
-10. [Level 10]()
+<!--
+9. [Level 8]()
+10. [Level 9]()
+11. [Level 10]()
+-->
